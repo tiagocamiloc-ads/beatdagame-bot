@@ -1,0 +1,13 @@
+# Netlify deploys only apps/web (the CRM). The scraping/generation/publish
+# jobs run separately via GitHub Actions (see .github/workflows): Netlify
+# never runs Playwright or the long-running jobs.
+[build]
+  base = "apps/web"
+  command = "corepack enable && pnpm install --frozen-lockfile --filter @beatdagame/web... && pnpm --filter @beatdagame/db run generate && pnpm --filter @beatdagame/web run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

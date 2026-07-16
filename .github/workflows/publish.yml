@@ -1,0 +1,51 @@
+name: Publish approved articles
+
+on:
+  schedule:
+    - cron: "5 * * * *" # every hour, 5 minutes past
+  workflow_dispatch: {}
+
+concurrency:
+  group: publish-articles
+  # Never run two publish jobs at once: belt-and-suspenders alongside the
+  # DB-level compare-and-swap lock in claimArticleForPublishing().
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @beatdagame/worker... --filter @beatdagame/db --filter @beatdagame/core
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Run publish job
+        run: pnpm publish-articles
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          KIE_AI_API_KEY: ${{ secrets.KIE_AI_API_KEY }}
+          KIE_AI_BASE_URL: ${{ secrets.KIE_AI_BASE_URL }}
+          MAX_MONTHLY_IMAGE_SPEND_USD: ${{ secrets.MAX_MONTHLY_IMAGE_SPEND_USD }}
+          STORY_TEMPLATE_IMAGE_URL: ${{ secrets.STORY_TEMPLATE_IMAGE_URL }}
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          WP_DEFAULT_CATEGORY_ID: ${{ secrets.WP_DEFAULT_CATEGORY_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}

@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+.DS_Store
+playwright-report/
+test-results/
+packages/db/generated/
+.netlify/
+
+# Local Claude Code session config, not project source
+.claude/

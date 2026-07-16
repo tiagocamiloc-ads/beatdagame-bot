@@ -1,0 +1,33 @@
+{
+  "name": "beatdagame-bot",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:web": "pnpm --filter @beatdagame/web dev",
+    "scrape": "pnpm --filter @beatdagame/worker run scrape",
+    "publish-articles": "pnpm --filter @beatdagame/worker run publish",
+    "migrate:sheets": "tsx scripts/migrate-from-sheets.ts",
+    "create-user": "tsx scripts/create-user.ts",
+    "db:generate": "pnpm --filter @beatdagame/db run generate",
+    "db:migrate": "pnpm --filter @beatdagame/db run migrate",
+    "db:studio": "pnpm --filter @beatdagame/db run studio",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "dependencies": {
+    "@beatdagame/db": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

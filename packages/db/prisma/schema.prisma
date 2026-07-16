@@ -1,0 +1,155 @@
+// Prisma schema for the Beatdagame content pipeline.
+// Replaces the Google Sheet "Bot BDG" as the single source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Internal CRM users only (a handful of editors): Credentials-based
+// NextAuth login, not a public signup flow.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+enum ArticleStatus {
+  pending_generation // scraped, article text not written yet
+  pending_review // written, waiting for a human in the CRM
+  approved // human approved, waiting to be published
+  publishing // publish job has claimed this row (short-lived lock state)
+  published
+  rejected
+  failed // publish/generation failed too many times, needs a human
+}
+
+enum ArticleEventType {
+  scraped
+  scrape_failed
+  generated
+  generation_failed
+  extraction_fallback_used // selector missed, LLM structured-extraction fallback kicked in
+  status_changed
+  publish_started
+  publish_succeeded
+  publish_failed
+  image_job_submitted
+  image_job_completed
+  image_job_failed
+  duplicate_skipped
+}
+
+enum ImageJobKind {
+  featured
+  ig_story
+}
+
+enum ImageJobStatus {
+  pending
+  succeeded
+  failed
+  skipped_budget
+}
+
+model Source {
+  id         String    @id @default(cuid())
+  slug       String    @unique // "wsop" | "pokernews" | ...
+  name       String
+  listingUrl String
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  articles   Article[]
+
+  @@map("sources")
+}
+
+model Article {
+  id       String @id @default(cuid())
+  sourceId String
+  source   Source @relation(fields: [sourceId], references: [id])
+
+  // Dedup key. NULL is allowed (and multiple NULLs don't collide in Postgres
+  // unique constraints) so legacy-imported rows without a canonical URL can
+  // coexist with real, uniqueness-enforced scraped rows.
+  sourceUrl         String?   @unique
+  sourceTitle       String?
+  sourceImageUrl    String?
+  sourcePublishedAt DateTime?
+
+  status ArticleStatus @default(pending_generation)
+
+  title    String?
+  excerpt  String?
+  bodyHtml String? @db.Text
+
+  generatedImageUrl String?
+  igStoryImageUrl   String?
+
+  wpPostId  Int?
+  wpPostUrl String?
+
+  notes        String? @db.Text
+  errorMessage String? @db.Text
+  retryCount   Int     @default(0)
+
+  // Idempotency lock for the publish job's compare-and-swap update.
+  lockedAt DateTime?
+  lockedBy String?
+
+  // True for rows imported from the legacy Google Sheet, where "Fonte" was
+  // free text rather than a canonical URL.
+  legacyImport     Boolean @default(false)
+  legacySourceText String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  approvedAt  DateTime?
+  publishedAt DateTime?
+
+  events           ArticleEvent[]
+  imageJobs        ImageGenerationJob[]
+
+  @@index([status])
+  @@index([sourceId, status])
+  @@map("articles")
+}
+
+model ArticleEvent {
+  id        String            @id @default(cuid())
+  articleId String
+  article   Article           @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  eventType ArticleEventType
+  payload   Json?
+  createdAt DateTime          @default(now())
+
+  @@index([articleId, createdAt])
+  @@map("article_events")
+}
+
+model ImageGenerationJob {
+  id           String         @id @default(cuid())
+  articleId    String
+  article      Article        @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  kind         ImageJobKind
+  provider     String         @default("kie.ai")
+  model        String
+  externalTaskId String?
+  status       ImageJobStatus @default(pending)
+  costEstimateUsd Decimal     @default(0) @db.Decimal(8, 4)
+  resultUrl    String?
+  errorMessage String?        @db.Text
+  createdAt    DateTime       @default(now())
+  completedAt  DateTime?
+
+  @@index([createdAt])
+  @@map("image_generation_jobs")
+}
