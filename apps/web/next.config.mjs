@@ -1,8 +1,33 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const monorepoRoot = path.join(__dirname, "../..");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   // apps/web imports the Prisma client from the workspace package.
   transpilePackages: ["@beatdagame/db"],
+  experimental: {
+    // In a pnpm monorepo, @prisma/client (and its compiled query-engine
+    // .node binary) lives symlinked from the workspace root's virtual
+    // store, not inside apps/web/node_modules. Next's default file tracer
+    // only follows symlinks within apps/web, so it silently drops the
+    // engine binary from the serverless function bundle -- the resulting
+    // deploy 500s at request time with "Query Engine ... could not be
+    // found", even though the build itself succeeds. Pointing the tracer
+    // at the monorepo root fixes resolution; the explicit include is a
+    // second safety net in case the glob still misses the binary.
+    outputFileTracingRoot: monorepoRoot,
+    outputFileTracingIncludes: {
+      "/board": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/*.node"],
+      "/admin/health": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/*.node"],
+      "/api/articles": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/*.node"],
+      "/api/articles/[id]": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/*.node"],
+      "/api/auth/[...nextauth]": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/*.node"],
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.wsopcdn.com" },
