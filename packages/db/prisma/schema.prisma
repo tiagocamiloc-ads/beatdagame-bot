@@ -11,8 +11,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Supabase's shared transaction-mode pooler (port 6543, pgbouncer=true):
+  // used for normal runtime queries, IPv4-compatible, appropriate for the
+  // short-lived connections made by GitHub Actions jobs and Netlify
+  // functions.
+  url       = env("DATABASE_URL")
+  // Session-mode pooler (port 5432): required for schema migrations
+  // (`prisma migrate deploy`/`dev`), since the transaction pooler doesn't
+  // support the prepared statements DDL migrations rely on.
+  directUrl = env("DIRECT_URL")
 }
 
 // Internal CRM users only (a handful of editors): Credentials-based
