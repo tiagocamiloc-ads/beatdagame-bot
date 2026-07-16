@@ -3,7 +3,7 @@
 # never runs Playwright or the long-running jobs.
 [build]
   base = "apps/web"
-  command = "corepack enable && pnpm install --frozen-lockfile --filter @beatdagame/web... && pnpm --filter @beatdagame/db run generate && pnpm --filter @beatdagame/web run build"
+  command = "npx --yes pnpm@9 install --frozen-lockfile --filter @beatdagame/web... && npx --yes pnpm@9 --filter @beatdagame/db run generate && npx --yes pnpm@9 --filter @beatdagame/web run build"
   publish = ".next"
 
 [build.environment]

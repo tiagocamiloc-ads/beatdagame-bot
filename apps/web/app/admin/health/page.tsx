@@ -1,4 +1,7 @@
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@beatdagame/db";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,9 @@ async function getHealthData() {
 }
 
 export default async function AdminHealthPage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+
   const { sources, statusCounts, recentFailures, staleGeneration } = await getHealthData();
 
   const countByStatus = Object.fromEntries(statusCounts.map((s) => [s.status, s._count]));
