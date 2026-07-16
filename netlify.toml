@@ -5,6 +5,12 @@
   base = "apps/web"
   command = "npx --yes pnpm@9 install --frozen-lockfile --filter @beatdagame/web... && npx --yes pnpm@9 --filter @beatdagame/db run generate && npx --yes pnpm@9 --filter @beatdagame/web run build"
   publish = ".next"
+  # Netlify's default change-detection only watches the "base" directory,
+  # so a commit touching only packages/db or packages/core (both bundled
+  # into the web build via transpilePackages) would otherwise be silently
+  # skipped. `git diff --quiet` exits 0 (skip build) when NONE of these
+  # paths changed, and 1 (run build) when any of them did.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/web packages/db packages/core"
 
 [build.environment]
   NODE_VERSION = "22"
