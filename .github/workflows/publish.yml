@@ -18,9 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No "version" input here: pnpm/action-setup reads it from
+      # package.json's "packageManager" field, and passing both causes
+      # "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -37,6 +38,7 @@ jobs:
         run: pnpm publish-articles
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
           KIE_AI_API_KEY: ${{ secrets.KIE_AI_API_KEY }}
           KIE_AI_BASE_URL: ${{ secrets.KIE_AI_BASE_URL }}
           MAX_MONTHLY_IMAGE_SPEND_USD: ${{ secrets.MAX_MONTHLY_IMAGE_SPEND_USD }}
