@@ -110,6 +110,24 @@ async function processSource(adapter: SourceAdapter, stats: RunStats): Promise<v
         });
         await logEvent(article.id, "scraped", { url: item.url });
 
+        // An article with no source image can never get a proper WordPress
+        // featured image (the publish job only re-edits an existing photo,
+        // it doesn't generate one from nothing), so it would just clutter
+        // the review queue and eventually fail to publish anyway. Reject
+        // it immediately, before spending an LLM call writing text for it.
+        if (!scraped.imageUrl) {
+          await prisma.article.update({
+            where: { id: article.id },
+            data: { status: "rejected", notes: "Auto-rejected: no image available from source." },
+          });
+          await logEvent(article.id, "status_changed", {
+            from: "pending_generation",
+            to: "rejected",
+            reason: "no_source_image",
+          });
+          continue;
+        }
+
         try {
           const generated = await writeArticle({
             sourceTitle: scraped.title,

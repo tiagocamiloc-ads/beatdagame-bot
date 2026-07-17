@@ -2,9 +2,14 @@ name: Scrape and generate articles
 
 on:
   schedule:
-    # 09:00 Europe/Lisbon (UTC+0 in winter, UTC+1 in summer) ~= 08:00-09:00 UTC.
-    # GitHub cron is UTC only; adjust if you need an exact local time year-round.
-    - cron: "0 8 * * *"
+    # Every 3 hours, not once daily. Two reasons: (1) GitHub silently drops
+    # or delays low-frequency scheduled workflows more often than
+    # high-frequency ones -- the original once-a-day "0 8 * * *" simply
+    # never fired on its first scheduled day, while publish.yml's hourly
+    # cron has been reliable since day one; (2) dedup on source_url makes
+    # repeat runs with nothing new essentially free, so running more often
+    # only means new poker news gets picked up faster, not wasted work.
+    - cron: "0 */3 * * *"
   workflow_dispatch: {} # manual trigger, e.g. for testing a single run
 
 concurrency:
