@@ -51,6 +51,35 @@ export function EditArticleModal({
           <img src={image} alt="" className="mb-4 h-56 w-full rounded-lg object-cover" />
         )}
 
+        <div className="mb-4 space-y-1 text-xs text-slate-500">
+          {article.sourceImageUrl && (
+            <div>
+              Imagem original:{" "}
+              <a
+                href={article.sourceImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-blue-600 hover:underline"
+              >
+                {article.sourceImageUrl}
+              </a>
+            </div>
+          )}
+          {article.sourceUrl && (
+            <div>
+              Notícia original:{" "}
+              <a
+                href={article.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-blue-600 hover:underline"
+              >
+                {article.sourceUrl}
+              </a>
+            </div>
+          )}
+        </div>
+
         {isLocked && (
           <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Este artigo está no estado "{STATUS_LABELS[article.status]}", gerido automaticamente. Não pode ser editado no CRM.
