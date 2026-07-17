@@ -14,6 +14,20 @@ function getClient(): Anthropic {
 
 const WRITE_ARTICLE_MODEL = "claude-sonnet-5";
 
+const WRAPPING_QUOTE_CHARS = ['"', "“”", "'"];
+
+/** Removes one matching leading+trailing quote pair, if present. See usage below for why. */
+export function stripWrappingQuotes(value: string): string {
+  const trimmed = value.trim();
+  for (const pair of WRAPPING_QUOTE_CHARS) {
+    const [open, close] = pair.length === 2 ? [pair[0], pair[1]] : [pair, pair];
+    if (trimmed.length > 1 && trimmed.startsWith(open) && trimmed.endsWith(close)) {
+      return trimmed.slice(1, -1).trim();
+    }
+  }
+  return trimmed;
+}
+
 /**
  * Structured output is enforced via tool_use with `tool_choice` forced to
  * this single tool: the Anthropic Messages API guarantees the tool's
@@ -32,7 +46,8 @@ const WRITE_ARTICLE_TOOL: Anthropic.Tool = {
       bodyHtml: {
         type: "string",
         description:
-          "180-250 word English news brief as HTML using only <p> and <strong> tags, 5-6 short paragraphs, each adding new information with no repetition.",
+          "180-250 word English news brief as HTML using only <p> and <strong> tags, 5-6 short paragraphs, each adding new information with no repetition. " +
+          'Return the raw HTML markup only. Do NOT wrap the value in extra quote characters (e.g. do not start/end the string with a literal " character) — the field is already a plain string, not a quoted code sample.',
       },
     },
     required: ["title", "excerpt", "bodyHtml"],
@@ -93,10 +108,22 @@ export async function writeArticle(input: WriteArticleInput): Promise<GeneratedA
     throw new Error("Claude did not return a submit_article tool call");
   }
 
-  const result = toolUse.input as GeneratedArticle;
-  if (!result.title || !result.excerpt || !result.bodyHtml) {
-    throw new Error(`Claude tool_use input missing required fields: ${JSON.stringify(result)}`);
+  const raw = toolUse.input as GeneratedArticle;
+  if (!raw.title || !raw.excerpt || !raw.bodyHtml) {
+    throw new Error(`Claude tool_use input missing required fields: ${JSON.stringify(raw)}`);
   }
+
+  // Defensive cleanup: despite the tool schema being strictly typed as a
+  // plain string, Claude occasionally wraps a field's value in an extra
+  // pair of quote characters (as if demonstrating a string literal),
+  // which then gets published verbatim onto the live WordPress post.
+  // Stripping a single matching leading/trailing quote is a no-op for
+  // well-formed output and a safety net for this specific failure mode.
+  const result: GeneratedArticle = {
+    title: stripWrappingQuotes(raw.title),
+    excerpt: stripWrappingQuotes(raw.excerpt),
+    bodyHtml: stripWrappingQuotes(raw.bodyHtml),
+  };
   return result;
 }
 
