@@ -12,6 +12,13 @@ import { prisma, articleExistsForUrl, logEvent, getOrCreateSource } from "@beatd
 import type { ScrapedArticle, SourceAdapter } from "@beatdagame/core";
 import type { Page } from "playwright";
 
+// WSOP.com re-lists old rolling live-update pages (e.g. "wsop-updates-2026-...")
+// on its main news listing days or weeks after their displayed publish date,
+// which the source_url dedup can't catch since it's genuinely a URL never
+// seen before. Reject anything whose source-reported publish date is older
+// than this, rather than surfacing week(s)-old news as if it were current.
+const MAX_ARTICLE_AGE_DAYS = 5;
+
 interface RunStats {
   candidatesSeen: number;
   duplicatesSkipped: number;
@@ -126,6 +133,26 @@ async function processSource(adapter: SourceAdapter, stats: RunStats): Promise<v
             reason: "no_source_image",
           });
           continue;
+        }
+
+        if (scraped.publishedAt) {
+          const ageDays = (Date.now() - scraped.publishedAt.getTime()) / (1000 * 60 * 60 * 24);
+          if (ageDays > MAX_ARTICLE_AGE_DAYS) {
+            await prisma.article.update({
+              where: { id: article.id },
+              data: {
+                status: "rejected",
+                notes: `Auto-rejected: source published ${Math.round(ageDays)} days ago, too stale.`,
+              },
+            });
+            await logEvent(article.id, "status_changed", {
+              from: "pending_generation",
+              to: "rejected",
+              reason: "stale_source_publish_date",
+              ageDays: Math.round(ageDays),
+            });
+            continue;
+          }
         }
 
         try {
