@@ -12,6 +12,7 @@
     "publish-articles": "pnpm --filter @beatdagame/worker run publish",
     "migrate:sheets": "tsx scripts/migrate-from-sheets.ts",
     "create-user": "tsx scripts/create-user.ts",
+    "retry-failed": "tsx scripts/retry-failed-articles.ts",
     "db:generate": "pnpm --filter @beatdagame/db run generate",
     "db:migrate": "pnpm --filter @beatdagame/db run migrate",
     "db:studio": "pnpm --filter @beatdagame/db run studio",
