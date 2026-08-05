@@ -7,7 +7,10 @@ name: Article recovery tools
 # - hold-stale-approved: moves "approved" articles whose source publish date
 #   falls outside the current calendar month to "rejected", so a bulk
 #   retry-failed doesn't republish week(s)-old news as if it were current.
-# Both default to a dry run.
+# - test-slack-credit-alert: sends one Slack message with the current
+#   kie.ai credit balance, using the same format as the real low-credit
+#   warning, to confirm SLACK_WEBHOOK_URL is wired correctly.
+# retry-failed and hold-stale-approved default to a dry run.
 on:
   workflow_dispatch:
     inputs:
@@ -17,6 +20,7 @@ on:
         options:
           - retry-failed
           - hold-stale-approved
+          - test-slack-credit-alert
         default: retry-failed
       apply:
         description: "Actually apply the change (unchecked = dry run, just lists)"
@@ -42,7 +46,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter @beatdagame/db... --filter beatdagame-bot
+        run: pnpm install --frozen-lockfile --filter @beatdagame/db... --filter @beatdagame/core... --filter beatdagame-bot
 
       - name: Generate Prisma client
         run: pnpm db:generate
@@ -55,3 +59,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          KIE_AI_API_KEY: ${{ secrets.KIE_AI_API_KEY }}
+          KIE_AI_BASE_URL: ${{ secrets.KIE_AI_BASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -14,6 +14,7 @@
     "create-user": "tsx scripts/create-user.ts",
     "retry-failed": "tsx scripts/retry-failed-articles.ts",
     "hold-stale-approved": "tsx scripts/hold-stale-approved.ts",
+    "test-slack-credit-alert": "tsx scripts/test-slack-credit-alert.ts",
     "db:generate": "pnpm --filter @beatdagame/db run generate",
     "db:migrate": "pnpm --filter @beatdagame/db run migrate",
     "db:studio": "pnpm --filter @beatdagame/db run studio",
@@ -21,6 +22,7 @@
     "typecheck": "pnpm -r typecheck"
   },
   "dependencies": {
+    "@beatdagame/core": "workspace:*",
     "@beatdagame/db": "workspace:*",
     "bcryptjs": "^2.4.3",
     "csv-parse": "^5.6.0",

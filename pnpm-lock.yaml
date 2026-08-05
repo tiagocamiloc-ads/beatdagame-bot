@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@beatdagame/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@beatdagame/db':
         specifier: workspace:*
         version: link:packages/db
