@@ -1,0 +1,57 @@
+name: Article recovery tools
+
+# Manual-only admin scripts:
+# - retry-failed: resets articles stuck in "failed" (publish retries
+#   exhausted, e.g. during a kie.ai credit outage) back to "approved" so the
+#   next publish.yml run picks them up.
+# - hold-stale-approved: moves "approved" articles whose source publish date
+#   falls outside the current calendar month to "rejected", so a bulk
+#   retry-failed doesn't republish week(s)-old news as if it were current.
+# Both default to a dry run.
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Which script to run"
+        type: choice
+        options:
+          - retry-failed
+          - hold-stale-approved
+        default: retry-failed
+      apply:
+        description: "Actually apply the change (unchecked = dry run, just lists)"
+        type: boolean
+        default: false
+      all:
+        description: "retry-failed only: reset every failed article, not just kie.ai/image-related ones"
+        type: boolean
+        default: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @beatdagame/db... --filter beatdagame-bot
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Run script
+        run: >
+          pnpm ${{ inputs.script }}
+          ${{ inputs.apply && '--apply' || '' }}
+          ${{ inputs.script == 'retry-failed' && inputs.all && '--all' || '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

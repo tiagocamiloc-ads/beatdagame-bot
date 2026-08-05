@@ -13,6 +13,7 @@
     "migrate:sheets": "tsx scripts/migrate-from-sheets.ts",
     "create-user": "tsx scripts/create-user.ts",
     "retry-failed": "tsx scripts/retry-failed-articles.ts",
+    "hold-stale-approved": "tsx scripts/hold-stale-approved.ts",
     "db:generate": "pnpm --filter @beatdagame/db run generate",
     "db:migrate": "pnpm --filter @beatdagame/db run migrate",
     "db:studio": "pnpm --filter @beatdagame/db run studio",
