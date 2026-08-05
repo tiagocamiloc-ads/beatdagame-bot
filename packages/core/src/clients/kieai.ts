@@ -35,6 +35,12 @@ async function kieFetch(path: string, init: RequestInit) {
   return res.json();
 }
 
+/** Remaining kie.ai account credit balance. */
+export async function getCreditBalance(): Promise<number> {
+  const json = await kieFetch("/chat/credit", { method: "GET" });
+  return json?.data as number;
+}
+
 export async function createTask(model: string, input: Record<string, unknown>): Promise<string> {
   const json = await kieFetch("/jobs/createTask", {
     method: "POST",

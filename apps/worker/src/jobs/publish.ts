@@ -3,6 +3,7 @@ import {
   submitFeaturedImageEdit,
   submitStoryImageEdit,
   pollUntilComplete,
+  getCreditBalance,
   COST_ESTIMATE_USD,
   publishArticleToWordPress,
   notify,
@@ -24,6 +25,28 @@ import type { Article } from "@beatdagame/db";
 const WORKER_RUN_ID = `publish-${process.env.GITHUB_RUN_ID ?? Date.now()}`;
 const MAX_MONTHLY_SPEND = Number(process.env.MAX_MONTHLY_IMAGE_SPEND_USD ?? "150");
 const STORY_TEMPLATE_URL = process.env.STORY_TEMPLATE_IMAGE_URL;
+const LOW_CREDIT_THRESHOLD = 100;
+
+/**
+ * Checked after every kie.ai image job so a dwindling balance gets flagged
+ * well before it hits zero and starts failing publishes outright (see the
+ * Aug 5 2026 outage that stranded 22 articles). Best-effort: a failure here
+ * must never block the publish itself.
+ */
+async function warnIfCreditsLow() {
+  try {
+    const balance = await getCreditBalance();
+    if (balance < LOW_CREDIT_THRESHOLD) {
+      await notify({
+        severity: "warning",
+        title: `kie.ai credits low: ${balance} remaining`,
+        details: { balance, threshold: LOW_CREDIT_THRESHOLD },
+      });
+    }
+  } catch (err) {
+    console.error("Failed to check kie.ai credit balance:", err);
+  }
+}
 
 /**
  * Generates the featured image via kie.ai. Falls back to the original
@@ -47,6 +70,8 @@ async function resolveFeaturedImage(article: Article): Promise<string> {
   await logEvent(article.id, "image_job_submitted", { kind: "featured", taskId });
 
   const result = await pollUntilComplete(taskId);
+  await warnIfCreditsLow();
+
   if (result.status === "succeeded" && result.resultUrl) {
     await completeImageJob(job.id, "succeeded", { resultUrl: result.resultUrl });
     await logEvent(article.id, "image_job_completed", { kind: "featured" });
@@ -86,6 +111,8 @@ async function maybeGenerateStoryImage(article: Article, featuredImageUrl: strin
     });
 
     const result = await pollUntilComplete(taskId);
+    await warnIfCreditsLow();
+
     if (result.status === "succeeded" && result.resultUrl) {
       await completeImageJob(job.id, "succeeded", { resultUrl: result.resultUrl });
       return result.resultUrl;
